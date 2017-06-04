@@ -12,6 +12,7 @@
 const TextPane = require('./TextPane');
 const ImagePane = require('./ImagePane');
 const PlotPane = require('./PlotPane');
+const InputsPane = require('./InputsPane')
 
 const WidthProvider = require('./Width').default;
 
@@ -26,12 +27,14 @@ const PANES = {
   image: ImagePane,
   plot: PlotPane,
   text: TextPane,
+  inputs: InputsPane,
 };
 
 const PANE_SIZE = {
   image: [20, 20],
   plot:  [30, 24],
   text:  [20, 20],
+  inputs: [20, 20],
 };
 
 // TODO: Move some of this to smaller components and/or use something like redux

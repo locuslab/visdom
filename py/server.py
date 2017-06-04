@@ -123,6 +123,7 @@ class Application(tornado.web.Application):
             (r"/socket", SocketHandler, dict(state=state, subs=subs)),
             (r"/env/(.*)", EnvHandler, dict(state=state, subs=subs)),
             (r"/save", SaveHandler, dict(state=state, subs=subs)),
+            (r"/inputs/(.*)", InputsHandler, dict(state=state, subs=subs)),
             (r"/error/(.*)", ErrorHandler),
             (r"/(.*)", IndexHandler, dict(state=state)),
         ]
@@ -233,6 +234,7 @@ def register_pane(self, p, eid):
 
     env[p['id']] = p
 
+    print(p)
     broadcast(self, p, eid)
     self.write(p['id'])
 
@@ -249,13 +251,51 @@ class PostHandler(BaseHandler):
         p = pane(args)
         eid = extract_eid(args)
 
-        if ptype in ['image', 'text']:
+        if ptype in ['image', 'text', 'inputs']:
             p.update(dict(content=args['data'][0]['content'], type=ptype))
         else:
             p['content'] = dict(data=args['data'], layout=args['layout'])
             p['type'] = 'plot'
 
         register_pane(self, p, eid)
+
+
+class InputsHandler(BaseHandler):
+    def initialize(self, state, subs):
+        self.state = state
+        self.subs = subs
+
+    def convert(self, current_data, new_data):
+        try:
+            for (k,v) in current_data.items():
+                new_data[k] = type(v)(new_data[k])
+            return True
+        except:
+            return False
+
+    def get(self, pane_id):
+        args = tornado.escape.json_decode(tornado.escape.to_basestring(self.request.body))
+        eid = extract_eid(args)
+        self.write(self.state[eid]['jsons'][pane_id]["content"])
+
+    def post(self, pane_id):
+        new_data = tornado.escape.json_decode(tornado.escape.to_basestring(self.request.body))
+        for eid,v in self.state.items():
+            if pane_id in v['jsons']:
+                current_data = v['jsons'][pane_id]["content"]
+                updated_pane = {
+                    'command': 'pane',
+                    'type': v['jsons'][pane_id]['type'],
+                    'id': pane_id,
+                    'title': v['jsons'][pane_id]['title'],
+                    'contentID': get_rand_id()   # to detected updated panes
+                }
+                if self.convert(current_data, new_data):
+                    updated_pane["content"] = new_data
+                else:
+                    updated_pane["content"] = current_data
+                print(updated_pane)
+                register_pane(self, updated_pane, eid)
 
 
 class UpdateHandler(BaseHandler):

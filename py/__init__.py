@@ -245,6 +245,27 @@ class Visdom(object):
             traceback.print_exc()
             return False
 
+    # Utils
+    def _get(self, msg, endpoint='inputs'):
+        """
+        Issue a get call to the server, assuming it will return JSON
+        """
+        if msg.get('eid', None) is None:
+            msg['eid'] = self.env
+
+        try:
+            r = requests.get(
+                "{0}:{1}/{2}".format(self.server, self.port, endpoint),
+                data=json.dumps(msg),
+            )
+            return json.loads(r.text)
+        except BaseException:
+            print("Exception in user code:")
+            print('-' * 60)
+            traceback.print_exc()
+            return False
+
+
     def save(self, envs):
         """
         This function allows the user to save envs that are alive on the
@@ -287,6 +308,25 @@ class Visdom(object):
             'eid': env,
             'title': opts.get('title'),
         })
+
+    def inputs(self, inputs, win=None, env=None, opts=None):
+        """
+        Create a pane with input fields for interactions
+        """
+        opts = {} if opts is None else opts
+        _assert_opts(opts)
+        data = [{'type':'inputs', 'content':inputs}]
+
+        return self._send({
+            'data': data,
+            'win': win,
+            'eid': env,
+            'title': opts.get('title'),
+        })
+
+    def get_inputs(self, win, env=None):
+        return self._get({"eid":env}, "inputs/"+win);
+
 
     def svg(self, svgstr=None, svgfile=None, win=None, env=None, opts=None):
         """
